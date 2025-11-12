@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import WATCHES from "../watches.json";
 
 function formatCurrency(n) {
@@ -116,6 +116,15 @@ export default function App() {
     const phone = VENDOR.phoneIntl.replace(/\s+/g, "");
     return `https://wa.me/${phone.replace(/^\+/, "")}?text=${msg}`;
   };
+
+  // close modal on Escape key
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") setSelected(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
@@ -298,8 +307,16 @@ export default function App() {
 
       {/* Modal / cart */}
       {selected && (
-        <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md sm:max-w-3xl w-full overflow-auto">
+        <div
+          className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4"
+          // clicking backdrop closes modal
+          onClick={() => setSelected(null)}
+        >
+          {/* stopPropagation prevents clicks inside the panel from closing */}
+          <div
+            className="bg-white rounded-2xl shadow-xl max-w-md sm:max-w-3xl w-full overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-4 flex flex-col sm:flex-row items-start gap-4">
               <div className="w-full sm:w-1/2">
                 {selected !== "cart" ? (
