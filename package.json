@@ -1,0 +1,26 @@
+{
+  "name": "samson-watch",
+  "private": true,
+  "version": "0.0.0",
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.9.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.1",
+    "autoprefixer": "^10.4.22",
+    "postcss": "^8.5.6",
+    "prettier": "^3.6.2",
+    "prettier-plugin-tailwindcss": "^0.7.1",
+    "tailwindcss": "^3.4.14",
+    "vite": "^7.2.2"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "echo \"(add eslint if you want)\" && exit 0",
+    "format": "echo \"(add prettier if you want)\" && exit 0"
+  }
+}
