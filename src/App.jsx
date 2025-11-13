@@ -7,7 +7,7 @@ function formatCurrency(n) {
 }
 
 const VENDOR = {
-  name: "Samson Chinkelly",
+  name: "Samson",
   phoneLocal: "07069761167",
   phoneIntl: "+2347069761167",
   email: "otalorsamson50@gmail.com",
@@ -484,7 +484,7 @@ export default function App() {
                       rel="noreferrer"
                       className="flex-1 px-4 py-2 rounded-lg bg-green-600 text-white text-center"
                     >
-                      Contact on WhatsApp
+                      Finish Up
                     </a>
 
                     <a
@@ -578,7 +578,7 @@ export default function App() {
                         rel="noreferrer"
                         className="flex-1 px-4 py-2 rounded-lg bg-green-600 text-white text-center"
                       >
-                        Contact on WhatsApp
+                       Finish Up
                       </a>
 
                       <a
@@ -611,8 +611,8 @@ export default function App() {
 
       <footer className="border-t mt-12 bg-white">
         <div className="max-w-7xl mx-auto px-4 py-6 text-sm text-gray-600 flex items-center justify-between">
-          <div>© {new Date().getFullYear()} ChronoLite — All rights reserved</div>
-          <div>Built with React + Tailwind</div>
+          <div>done by <a  className="font-bold text-blue-500" href="https://www.josephbawo.tech/">josephbawo</a> </div>
+          {/* <div>Built with React + Tailwind</div> */}
         </div>
       </footer>
     </div>
