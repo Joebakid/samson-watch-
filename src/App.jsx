@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import WATCHES from "../watches.json";
+import { Analytics } from "@vercel/analytics/react"
 
 function formatCurrency(n) {
   const num = Number(n) || 0;
@@ -615,6 +616,8 @@ export default function App() {
           {/* <div>Built with React + Tailwind</div> */}
         </div>
       </footer>
+      <Analytics />
+
     </div>
   );
 }
