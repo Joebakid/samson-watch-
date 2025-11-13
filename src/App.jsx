@@ -89,6 +89,27 @@ export default function App() {
     });
   };
 
+  const incrementQty = (id) => {
+    setCart((c) => {
+      const copy = { ...c };
+      if (copy[id]) copy[id] = { ...copy[id], qty: copy[id].qty + 1 };
+      return copy;
+    });
+  };
+
+  const decrementQty = (id) => {
+    setCart((c) => {
+      const copy = { ...c };
+      if (!copy[id]) return copy;
+      if (copy[id].qty <= 1) {
+        delete copy[id];
+      } else {
+        copy[id] = { ...copy[id], qty: copy[id].qty - 1 };
+      }
+      return copy;
+    });
+  };
+
   const cartCount = Object.values(cart).reduce((s, it) => s + it.qty, 0);
   const cartTotal = Object.values(cart).reduce(
     (s, it) => s + it.qty * Number(it.product.price),
@@ -125,6 +146,46 @@ export default function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  // Prevent background scroll when cart is open (works well on iOS too)
+  useEffect(() => {
+    // Apply only when the cart is open
+    if (selected === "cart") {
+      const scrollY = window.scrollY || window.pageYOffset;
+      // store scroll position in body dataset so we can restore later
+      document.body.dataset.scrollY = String(scrollY);
+      // lock scroll
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+    } else {
+      // restore
+      const stored = document.body.dataset.scrollY;
+      if (stored !== undefined) {
+        const scrollY = parseInt(stored || "0", 10) || 0;
+        document.body.style.position = "";
+        document.body.style.top = "";
+        document.body.style.left = "";
+        document.body.style.right = "";
+        window.scrollTo(0, scrollY);
+        delete document.body.dataset.scrollY;
+      }
+    }
+
+    // cleanup if component unmounts for any reason
+    return () => {
+      if (document.body.dataset.scrollY !== undefined) {
+        const scrollY = parseInt(document.body.dataset.scrollY || "0", 10) || 0;
+        document.body.style.position = "";
+        document.body.style.top = "";
+        document.body.style.left = "";
+        document.body.style.right = "";
+        window.scrollTo(0, scrollY);
+        delete document.body.dataset.scrollY;
+      }
+    };
+  }, [selected]);
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
@@ -305,118 +366,247 @@ export default function App() {
         </section>
       </main>
 
-      {/* Modal / cart */}
-      {selected && (
+      {/* ---------------- Responsive Cart & Quick View ---------------- */}
+      {/* BACKDROP for desktop/tablet and full-screen modal for quick views */}
+      {/* Desktop/tablet overlay */}
+      {selected && selected !== "cart" && (
         <div
-          className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center p-4"
-          // clicking backdrop closes modal
+          className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-4"
           onClick={() => setSelected(null)}
         >
-          {/* stopPropagation prevents clicks inside the panel from closing */}
           <div
-            className="bg-white rounded-2xl shadow-xl max-w-md sm:max-w-3xl w-full overflow-auto"
+            className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-4 flex flex-col sm:flex-row items-start gap-4">
-              <div className="w-full sm:w-1/2">
-                {selected !== "cart" ? (
-                  <img src={selected.img} alt={selected.title} className="w-full h-80 object-cover rounded-lg" />
-                ) : (
-                  <div className="p-2"></div>
-                )}
+            <div className="p-4">
+              <h3 className="text-2xl font-bold">{selected.title}</h3>
+              <p className="text-gray-600 mt-2">{selected.description}</p>
+              <div className="mt-4">
+                <img
+                  src={selected.img}
+                  alt={selected.title}
+                  className="w-full h-64 object-cover rounded-lg"
+                />
+              </div>
+              <div className="mt-4 flex items-center justify-between">
+                <div className="text-2xl font-bold">{formatCurrency(selected.price)}</div>
+                <div className="text-sm text-gray-500">⭐ {selected.rating}</div>
               </div>
 
-              <div className="flex-1 p-2 text-left">
-                {selected === "cart" ? (
-                  <div>
-                    <h3 className="text-xl font-bold mb-2">Your cart</h3>
-                    {Object.keys(cart).length === 0 ? (
-                      <p className="text-gray-500">Cart is empty</p>
-                    ) : (
-                      <div className="space-y-4">
-                        {Object.values(cart).map((it) => (
-                          <div key={it.product.id} className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <img src={it.product.img} alt={it.product.title} className="w-16 h-16 object-cover rounded" />
-                              <div>
-                                <div className="font-medium">{truncate(it.product.title, TITLE_MAX)}</div>
-                                <div className="text-sm text-gray-500">{formatCurrency(it.product.price)}</div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="text-sm">Qty: {it.qty}</div>
-                              <button onClick={() => removeFromCart(it.product.id)} className="text-red-500 text-sm">
-                                Remove
-                              </button>
-                            </div>
-                          </div>
-                        ))}
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={() => {
+                    addToCart(selected);
+                    setSelected(null);
+                  }}
+                  className="px-4 py-2 rounded-lg bg-indigo-600 text-white"
+                >
+                  Add to cart
+                </button>
+                <button onClick={() => setSelected(null)} className="px-4 py-2 rounded-lg border">
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-                        <div className="pt-2 border-t flex items-center justify-between">
-                          <div className="font-semibold">Total</div>
-                          <div className="font-bold">{formatCurrency(cartTotal.toFixed(0))}</div>
-                        </div>
+      {/* CART: Mobile bottom sheet */}
+      {selected === "cart" && (
+        <>
+          {/* Mobile bottom sheet (visible on small screens) */}
+          <div
+            className="fixed inset-x-0 bottom-0 z-50 sm:hidden"
+            aria-hidden={selected !== "cart"}
+          >
+            <div
+              className="bg-black/30 fixed inset-0"
+              onClick={() => setSelected(null)}
+            />
+            <div
+              className="relative bg-white rounded-t-2xl shadow-xl max-h-[85vh] overflow-auto p-4"
+              style={{ borderTopLeftRadius: "1rem", borderTopRightRadius: "1rem" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold">Your cart ({cartCount})</h3>
+                <button onClick={() => setSelected(null)} className="px-3 py-1 rounded border">
+                  Close
+                </button>
+              </div>
 
-                        <div className="flex flex-col gap-2 mt-4">
-                          <a
-                            href={buildWhatsAppLink()}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex-1 px-4 py-2 rounded-lg bg-green-600 text-white text-center"
-                          >
-                            Contact on WhatsApp
-                          </a>
-
-                          <a
-                            href={`mailto:${VENDOR.email}?subject=${encodeURIComponent("Order enquiry")}&body=${encodeURIComponent(
-                              `Hello ${VENDOR.name},\n\nI want to order the following items:\n\nTotal: ${formatCurrency(cartTotal)}\n\nPlease get back to me with payment/availability details.\n\nThanks.`
-                            )}`}
-                            className="px-4 py-2 rounded-lg border text-center"
-                          >
-                            Email Vendor
-                          </a>
-
-                          <button onClick={() => setSelected(null)} className="px-4 py-2 rounded-lg border">
-                            Close
-                          </button>
-                        </div>
-
-                        <div className="text-sm text-gray-600 mt-3">
-                          <div>Vendor: {VENDOR.name}</div>
-                          <div>WhatsApp: {VENDOR.phoneLocal} ({VENDOR.phoneIntl})</div>
-                          <div>
-                            Email:{" "}
-                            <a className="text-indigo-600 underline" href={`mailto:${VENDOR.email}`}>
-                              {VENDOR.email}
-                            </a>
-                          </div>
+              {Object.keys(cart).length === 0 ? (
+                <p className="text-gray-500">Cart is empty</p>
+              ) : (
+                <div className="space-y-4">
+                  {Object.values(cart).map((it) => (
+                    <div key={it.product.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={it.product.img}
+                          alt={it.product.title}
+                          className="w-16 h-16 object-cover rounded"
+                        />
+                        <div>
+                          <div className="font-medium">{truncate(it.product.title, TITLE_MAX)}</div>
+                          <div className="text-sm text-gray-500">{formatCurrency(it.product.price)}</div>
                         </div>
                       </div>
-                    )}
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => decrementQty(it.product.id)}
+                          className="px-2 py-1 rounded border"
+                        >
+                          −
+                        </button>
+                        <div className="text-sm">{it.qty}</div>
+                        <button
+                          onClick={() => incrementQty(it.product.id)}
+                          className="px-2 py-1 rounded border"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="pt-2 border-t flex items-center justify-between">
+                    <div className="font-semibold">Total</div>
+                    <div className="font-bold">{formatCurrency(cartTotal)}</div>
                   </div>
+
+                  <div className="flex flex-col gap-2 mt-4">
+                    <a
+                      href={buildWhatsAppLink()}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 px-4 py-2 rounded-lg bg-green-600 text-white text-center"
+                    >
+                      Contact on WhatsApp
+                    </a>
+
+                    <a
+                      href={`mailto:${VENDOR.email}?subject=${encodeURIComponent("Order enquiry")}&body=${encodeURIComponent(
+                        `Hello ${VENDOR.name},\n\nI want to order the following items:\n\nTotal: ${formatCurrency(cartTotal)}\n\nPlease get back to me with payment/availability details.\n\nThanks.`
+                      )}`}
+                      className="px-4 py-2 rounded-lg border text-center"
+                    >
+                      Email Vendor
+                    </a>
+                  </div>
+
+                  <div className="text-sm text-gray-600 mt-3">
+                    <div>Vendor: {VENDOR.name}</div>
+                    <div>WhatsApp: {VENDOR.phoneLocal} ({VENDOR.phoneIntl})</div>
+                    <div>
+                      Email:{" "}
+                      <a className="text-indigo-600 underline" href={`mailto:${VENDOR.email}`}>
+                        {VENDOR.email}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Desktop / Tablet drawer (visible on sm+) */}
+          <div
+            className="fixed inset-0 hidden sm:flex z-40 items-stretch justify-end"
+            onClick={() => setSelected(null)}
+          >
+            <div className="flex-1 bg-black/40" />
+            <div
+              className="w-full sm:w-96 bg-white shadow-xl overflow-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-4 flex items-center justify-between">
+                <h3 className="text-lg font-bold">Your cart ({cartCount})</h3>
+                <button onClick={() => setSelected(null)} className="px-3 py-1 rounded border">
+                  Close
+                </button>
+              </div>
+
+              <div className="p-4">
+                {Object.keys(cart).length === 0 ? (
+                  <p className="text-gray-500">Cart is empty</p>
                 ) : (
-                  <div>
-                    <h3 className="text-2xl font-bold">{selected.title}</h3>
-                    <p className="text-gray-600 mt-2">{selected.description}</p>
-                    <div className="mt-4 flex items-center gap-4">
-                      <div className="text-2xl font-bold">{formatCurrency(selected.price)}</div>
-                      <div className="text-sm text-gray-500">⭐ {selected.rating}</div>
+                  <div className="space-y-4">
+                    {Object.values(cart).map((it) => (
+                      <div key={it.product.id} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={it.product.img}
+                            alt={it.product.title}
+                            className="w-16 h-16 object-cover rounded"
+                          />
+                          <div>
+                            <div className="font-medium">{truncate(it.product.title, TITLE_MAX)}</div>
+                            <div className="text-sm text-gray-500">{formatCurrency(it.product.price)}</div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => decrementQty(it.product.id)}
+                            className="px-2 py-1 rounded border"
+                          >
+                            −
+                          </button>
+                          <div className="text-sm">{it.qty}</div>
+                          <button
+                            onClick={() => incrementQty(it.product.id)}
+                            className="px-2 py-1 rounded border"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    <div className="pt-2 border-t flex items-center justify-between">
+                      <div className="font-semibold">Total</div>
+                      <div className="font-bold">{formatCurrency(cartTotal)}</div>
                     </div>
 
-                    <div className="mt-6 flex gap-3">
-                      <button onClick={() => addToCart(selected)} className="px-4 py-2 rounded-lg bg-indigo-600 text-white">
-                        Add to cart
-                      </button>
-                      <button onClick={() => setSelected(null)} className="px-4 py-2 rounded-lg border">
-                        Close
-                      </button>
+                    <div className="flex flex-col gap-2 mt-4">
+                      <a
+                        href={buildWhatsAppLink()}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex-1 px-4 py-2 rounded-lg bg-green-600 text-white text-center"
+                      >
+                        Contact on WhatsApp
+                      </a>
+
+                      <a
+                        href={`mailto:${VENDOR.email}?subject=${encodeURIComponent("Order enquiry")}&body=${encodeURIComponent(
+                          `Hello ${VENDOR.name},\n\nI want to order the following items:\n\nTotal: ${formatCurrency(cartTotal)}\n\nPlease get back to me with payment/availability details.\n\nThanks.`
+                        )}`}
+                        className="px-4 py-2 rounded-lg border text-center"
+                      >
+                        Email Vendor
+                      </a>
+                    </div>
+
+                    <div className="text-sm text-gray-600 mt-3">
+                      <div>Vendor: {VENDOR.name}</div>
+                      <div>WhatsApp: {VENDOR.phoneLocal} ({VENDOR.phoneIntl})</div>
+                      <div>
+                        Email:{" "}
+                        <a className="text-indigo-600 underline" href={`mailto:${VENDOR.email}`}>
+                          {VENDOR.email}
+                        </a>
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       <footer className="border-t mt-12 bg-white">
