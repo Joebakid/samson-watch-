@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import WATCHES from "../watches.json";
-import { Analytics } from "@vercel/analytics/react"
+import { Analytics } from "@vercel/analytics/react";
 
 function formatCurrency(n) {
   const num = Number(n) || 0;
@@ -36,6 +36,9 @@ export default function App() {
   const TITLE_MAX = 60; // characters for title shown on cards
   const DESC_MAX = 120; // characters for description shown on cards
 
+  const topRef = useRef(null); // ref to scroll-to when page changes
+
+  // Build PRODUCTS from WATCHES and add ₦5,000 to each price at runtime
   const PRODUCTS = useMemo(
     () =>
       WATCHES.map((p, i) => ({
@@ -44,12 +47,13 @@ export default function App() {
         brand:
           (p.brand && String(p.brand)) ||
           (p.name ? String(p.name).split(" ")[0] : "Brand"),
-        price: Number(p.price) || 0,
+        // add 5,000 to the base price (runtime only)
+        price: (Number(p.price) || 0) + 5000,
         img: p.img || "",
         description: p.description || (p.name ? p.name : ""),
         rating: p.rating || (3 + (i % 3) + (i % 10) * 0.01),
       })),
-    []
+    [WATCHES]
   );
 
   const filtered = useMemo(() => {
@@ -150,18 +154,15 @@ export default function App() {
 
   // Prevent background scroll when cart is open (works well on iOS too)
   useEffect(() => {
-    // Apply only when the cart is open
     if (selected === "cart") {
       const scrollY = window.scrollY || window.pageYOffset;
-      // store scroll position in body dataset so we can restore later
       document.body.dataset.scrollY = String(scrollY);
-      // lock scroll
       document.body.style.position = "fixed";
       document.body.style.top = `-${scrollY}px`;
       document.body.style.left = "0";
       document.body.style.right = "0";
+      document.body.style.overflow = "hidden";
     } else {
-      // restore
       const stored = document.body.dataset.scrollY;
       if (stored !== undefined) {
         const scrollY = parseInt(stored || "0", 10) || 0;
@@ -169,12 +170,12 @@ export default function App() {
         document.body.style.top = "";
         document.body.style.left = "";
         document.body.style.right = "";
+        document.body.style.overflow = "";
         window.scrollTo(0, scrollY);
         delete document.body.dataset.scrollY;
       }
     }
 
-    // cleanup if component unmounts for any reason
     return () => {
       if (document.body.dataset.scrollY !== undefined) {
         const scrollY = parseInt(document.body.dataset.scrollY || "0", 10) || 0;
@@ -182,11 +183,24 @@ export default function App() {
         document.body.style.top = "";
         document.body.style.left = "";
         document.body.style.right = "";
+        document.body.style.overflow = "";
         window.scrollTo(0, scrollY);
         delete document.body.dataset.scrollY;
       }
     };
   }, [selected]);
+
+  // Scroll main/topRef into view whenever the page changes
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (topRef.current && typeof topRef.current.scrollIntoView === "function") {
+        topRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }, 50);
+    return () => clearTimeout(t);
+  }, [currentPage]);
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
@@ -258,11 +272,10 @@ export default function App() {
       </header>
       {/* ---------- end header ---------- */}
 
-      <main className="max-w-7xl mx-auto px-4 py-8 text-left">
+      <main ref={topRef} className="max-w-7xl mx-auto px-4 py-8 text-left">
         <section className="flex items-center justify-between mb-6 gap-4">
           <div>
             <h1 className="text-3xl font-bold">Watches</h1>
-            {/* <p className="text-gray-600">Timeless pieces — handpicked for you</p> */}
           </div>
 
           <div className="flex items-center gap-3">
@@ -368,8 +381,7 @@ export default function App() {
       </main>
 
       {/* ---------------- Responsive Cart & Quick View ---------------- */}
-      {/* BACKDROP for desktop/tablet and full-screen modal for quick views */}
-      {/* Desktop/tablet overlay */}
+      {/* Desktop/tablet overlay for quick view */}
       {selected && selected !== "cart" && (
         <div
           className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-4"
@@ -416,15 +428,8 @@ export default function App() {
       {/* CART: Mobile bottom sheet */}
       {selected === "cart" && (
         <>
-          {/* Mobile bottom sheet (visible on small screens) */}
-          <div
-            className="fixed inset-x-0 bottom-0 z-50 sm:hidden"
-            aria-hidden={selected !== "cart"}
-          >
-            <div
-              className="bg-black/30 fixed inset-0"
-              onClick={() => setSelected(null)}
-            />
+          <div className="fixed inset-x-0 bottom-0 z-50 sm:hidden">
+            <div className="bg-black/30 fixed inset-0" onClick={() => setSelected(null)} />
             <div
               className="relative bg-white rounded-t-2xl shadow-xl max-h-[85vh] overflow-auto p-4"
               style={{ borderTopLeftRadius: "1rem", borderTopRightRadius: "1rem" }}
@@ -579,7 +584,7 @@ export default function App() {
                         rel="noreferrer"
                         className="flex-1 px-4 py-2 rounded-lg bg-green-600 text-white text-center"
                       >
-                       Finish Up
+                        Finish Up
                       </a>
 
                       <a
@@ -612,12 +617,16 @@ export default function App() {
 
       <footer className="border-t mt-12 bg-white">
         <div className="max-w-7xl mx-auto px-4 py-6 text-sm text-gray-600 flex items-center justify-between">
-          <div>done by <a  className="font-bold text-blue-500" href="https://www.josephbawo.tech/">josephbawo</a> </div>
-          {/* <div>Built with React + Tailwind</div> */}
+          <div>
+            done by{" "}
+            <a className="font-bold text-blue-500" href="https://www.josephbawo.tech/">
+              josephbawo
+            </a>
+          </div>
         </div>
       </footer>
-      <Analytics />
 
+      <Analytics />
     </div>
   );
 }
