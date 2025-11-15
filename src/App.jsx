@@ -195,7 +195,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center justify-between w-full sm:w-auto">
-              <div className="text-2xl font-bold">Sammy Fx</div>
+              <div className="text-xl font-bold">Sammy Fx</div>
               <div className="sm:hidden">
                 <button
                   onClick={() => setSelected("cart")}
