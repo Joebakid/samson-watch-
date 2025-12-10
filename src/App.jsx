@@ -98,15 +98,21 @@ export default function App() {
     if (!hasVendorInfo) return PRODUCTS;
     return PRODUCTS.filter(
       (p) =>
-        (VENDOR.id && String(p.vendorId).toLowerCase() === String(VENDOR.id).toLowerCase()) ||
-        (VENDOR.name && String(p.vendor).toLowerCase() === String(VENDOR.name).toLowerCase())
+        (VENDOR.id &&
+          String(p.vendorId).toLowerCase() ===
+            String(VENDOR.id).toLowerCase()) ||
+        (VENDOR.name &&
+          String(p.vendor).toLowerCase() ===
+            String(VENDOR.name).toLowerCase())
     );
   }, [PRODUCTS]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let list = VENDOR_PRODUCTS.filter(
-      (p) => p.title.toLowerCase().includes(q) || String(p.brand).toLowerCase().includes(q)
+      (p) =>
+        p.title.toLowerCase().includes(q) ||
+        String(p.brand).toLowerCase().includes(q)
     );
     list = list.slice();
     if (sort === "low") list.sort((a, b) => a.price - b.price);
@@ -116,7 +122,10 @@ export default function App() {
   }, [VENDOR_PRODUCTS, query, sort]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
-  const pageItems = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
+  const pageItems = filtered.slice(
+    (currentPage - 1) * perPage,
+    currentPage * perPage
+  );
 
   const addToCart = (product) => {
     setCart((c) => {
@@ -158,7 +167,70 @@ export default function App() {
   };
 
   const cartCount = Object.values(cart).reduce((s, it) => s + it.qty, 0);
-  const cartTotal = Object.values(cart).reduce((s, it) => s + it.qty * Number(it.product.price), 0);
+  const cartTotal = Object.values(cart).reduce(
+    (s, it) => s + it.qty * Number(it.product.price),
+    0
+  );
+
+  // ---------- PROMO LOGIC (watches only – here all products are watches) ----------
+  const watchTotal = cartTotal; // all items are watches on this page
+
+  const getBagOffer = (total) => {
+    if (total >= 60000) {
+      return {
+        tier: 3,
+        maxValue: 20000,
+        label: "Free bag worth up to ₦20,000",
+      };
+    }
+    if (total >= 55000) {
+      return {
+        tier: 2,
+        maxValue: 15000,
+        label: "Free bag worth up to ₦15,000",
+      };
+    }
+    if (total >= 50000) {
+      return {
+        tier: 1,
+        maxValue: 10000,
+        label: "Free bag worth up to ₦10,000",
+      };
+    }
+    return null;
+  };
+
+  const bagOffer = getBagOffer(watchTotal);
+
+  const getNextTierInfo = (total) => {
+    if (total < 50000) {
+      return {
+        nextAt: 50000,
+        diff: 50000 - total,
+        label:
+          "Add more watches to reach ₦50,000 and get a free bag worth up to ₦10,000.",
+      };
+    }
+    if (total < 55000) {
+      return {
+        nextAt: 55000,
+        diff: 55000 - total,
+        label:
+          "Add a bit more in watches to reach ₦55,000 and upgrade to a free bag worth up to ₦15,000.",
+      };
+    }
+    if (total < 60000) {
+      return {
+        nextAt: 60000,
+        diff: 60000 - total,
+        label:
+          "Add a bit more in watches to reach ₦60,000 and upgrade to a free bag worth up to ₦20,000.",
+      };
+    }
+    return null;
+  };
+
+  const nextTierInfo = getNextTierInfo(watchTotal);
 
   const buildWhatsAppLink = () => {
     const lines = [];
@@ -167,10 +239,30 @@ export default function App() {
     Object.values(cart).forEach((it) => {
       const title = it.product.title || it.product.name || "Item";
       const price = Number(it.product.price) || 0;
-      lines.push(`- ${title} x ${it.qty} — ${formatCurrency(price)} each`);
+      lines.push(
+        `- ${title} x ${it.qty} — ${formatCurrency(price)} each`
+      );
     });
     lines.push(`Total: ${formatCurrency(cartTotal)}`);
-    lines.push(`Please confirm availability and payment instructions.`);
+    lines.push(
+      `Watch total (for promo): ${formatCurrency(watchTotal)}`
+    );
+
+    if (bagOffer) {
+      lines.push(
+        `Promo: Based on my watch order, I qualify for a FREE bag worth up to ${formatCurrency(
+          bagOffer.maxValue
+        )}.`
+      );
+    } else {
+      lines.push(
+        `Promo: My watch total does not yet qualify for a free bag.`
+      );
+    }
+
+    lines.push(
+      `Please confirm availability, the free bag I qualify for, and payment instructions.`
+    );
     lines.push(`Contact email: ${VENDOR.email}`);
     lines.push(`Thanks!`);
     const msg = encodeURIComponent(lines.join("\n"));
@@ -212,7 +304,10 @@ export default function App() {
     }
     return () => {
       if (document.body.dataset.scrollY !== undefined) {
-        const scrollY = parseInt(document.body.dataset.scrollY || "0", 10) || 0;
+        const scrollY = parseInt(
+          document.body.dataset.scrollY || "0",
+          10
+        ) || 0;
         document.body.style.position = "";
         document.body.style.top = "";
         document.body.style.left = "";
@@ -227,8 +322,14 @@ export default function App() {
   // Scroll to topRef on page change
   useEffect(() => {
     const t = setTimeout(() => {
-      if (topRef.current && typeof topRef.current.scrollIntoView === "function") {
-        topRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (
+        topRef.current &&
+        typeof topRef.current.scrollIntoView === "function"
+      ) {
+        topRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
       } else {
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
@@ -242,11 +343,19 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center justify-between w-full sm:w-auto">
+              {/* You can swap this text for his logo image if you want */}
               <div className="text-xl font-bold">Sammy Fx</div>
               <div className="sm:hidden">
-                <button onClick={() => setSelected("cart")} className="relative inline-flex items-center gap-2 px-3 py-1 border rounded-full">
+                <button
+                  onClick={() => setSelected("cart")}
+                  className="relative inline-flex items-center gap-2 px-3 py-1 border rounded-full"
+                >
                   Cart
-                  {cartCount > 0 && <span className="absolute -top-2 -right-2 bg-indigo-600 text-white text-xs px-2 py-0.5 rounded-full">{cartCount}</span>}
+                  {cartCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-indigo-600 text-white text-xs px-2 py-0.5 rounded-full">
+                      {cartCount}
+                    </span>
+                  )}
                 </button>
               </div>
             </div>
@@ -263,19 +372,37 @@ export default function App() {
                     className="w-full rounded-full border px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                     placeholder="Search watches, brands..."
                   />
-                  {query && <button onClick={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">Clear</button>}
+                  {query && (
+                    <button
+                      onClick={() => setQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500"
+                    >
+                      Clear
+                    </button>
+                  )}
                 </div>
               </div>
 
               <div className="hidden sm:flex flex-col text-sm text-right mr-2">
-                <span className="font-medium">Free delivery over ₦50,000</span>
-                <span className="text-gray-500">30-day returns</span>
+                <span className="font-medium">
+                  Free delivery over ₦50,000
+                </span>
+                <span className="text-gray-500">
+                  Free bag promo on watch orders
+                </span>
               </div>
 
               <div className="hidden sm:flex">
-                <button onClick={() => setSelected("cart")} className="relative inline-flex items-center gap-2 px-4 py-2 border rounded-full">
+                <button
+                  onClick={() => setSelected("cart")}
+                  className="relative inline-flex items-center gap-2 px-4 py-2 border rounded-full"
+                >
                   Cart
-                  {cartCount > 0 && <span className="absolute -top-2 -right-2 bg-indigo-600 text-white text-xs px-2 py-0.5 rounded-full">{cartCount}</span>}
+                  {cartCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-indigo-600 text-white text-xs px-2 py-0.5 rounded-full">
+                      {cartCount}
+                    </span>
+                  )}
                 </button>
               </div>
             </div>
@@ -283,17 +410,32 @@ export default function App() {
         </div>
       </header>
 
-      <main ref={topRef} className="max-w-7xl mx-auto px-4 py-8 text-left">
+      <main
+        ref={topRef}
+        className="max-w-7xl mx-auto px-4 py-8 text-left"
+      >
         <section className="flex items-center justify-between mb-6 gap-4">
           <div>
             <h1 className="text-3xl font-bold">Watches</h1>
-            {loading && <div className="text-sm text-gray-500 mt-2">Loading products…</div>}
-            {loadError && <div className="text-sm text-red-600 mt-2">Failed to load products: {loadError}</div>}
+            {loading && (
+              <div className="text-sm text-gray-500 mt-2">
+                Loading products…
+              </div>
+            )}
+            {loadError && (
+              <div className="text-sm text-red-600 mt-2">
+                Failed to load products: {loadError}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
             <label className="text-sm text-gray-600">Sort</label>
-            <select value={sort} onChange={(e) => setSort(e.target.value)} className="rounded border px-3 py-2">
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+              className="rounded border px-3 py-2"
+            >
               <option value="popular">Popular</option>
               <option value="low">Price: Low → High</option>
               <option value="high">Price: High → Low</option>
@@ -305,28 +447,56 @@ export default function App() {
         <section>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {pageItems.map((p) => (
-              <article key={p.id} className="bg-white rounded-2xl shadow-sm overflow-hidden text-left">
+              <article
+                key={p.id}
+                className="bg-white rounded-2xl shadow-sm overflow-hidden text-left"
+              >
                 <div className="relative">
-                  <img src={p.img} alt={p.title} className="w-full h-56 object-cover" loading="lazy" />
-                  <div className="absolute left-3 top-3 bg-white/80 px-3 py-1 rounded-full text-sm font-medium">{p.brand}</div>
+                  <img
+                    src={p.img}
+                    alt={p.title}
+                    className="w-full h-56 object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute left-3 top-3 bg-white/80 px-3 py-1 rounded-full text-sm font-medium">
+                    {p.brand}
+                  </div>
                 </div>
 
                 <div className="p-4 flex flex-col gap-3">
                   <div className="flex items-start justify-between">
                     <div className="pr-4">
-                      <h3 className="font-semibold">{truncate(p.title, TITLE_MAX)}</h3>
-                      <p className="text-sm text-gray-500 min-h-[56px]">{truncate(p.description, DESC_MAX)}</p>
+                      <h3 className="font-semibold">
+                        {truncate(p.title, TITLE_MAX)}
+                      </h3>
+                      <p className="text-sm text-gray-500 min-h-[56px]">
+                        {truncate(p.description, DESC_MAX)}
+                      </p>
                     </div>
 
                     <div className="text-right">
-                      <div className="text-lg font-bold">{formatCurrency(p.price)}</div>
-                      <div className="text-xs text-gray-500">⭐ {p.rating}</div>
+                      <div className="text-lg font-bold">
+                        {formatCurrency(p.price)}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        ⭐ {p.rating}
+                      </div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <button onClick={() => addToCart(p)} className="flex-1 px-3 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:opacity-95">Add to cart</button>
-                    <button onClick={() => setSelected(p)} className="px-3 py-2 rounded-lg border text-sm">Quick view</button>
+                    <button
+                      onClick={() => addToCart(p)}
+                      className="flex-1 px-3 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:opacity-95"
+                    >
+                      Add to cart
+                    </button>
+                    <button
+                      onClick={() => setSelected(p)}
+                      className="px-3 py-2 rounded-lg border text-sm"
+                    >
+                      Quick view
+                    </button>
                   </div>
                 </div>
               </article>
@@ -334,35 +504,92 @@ export default function App() {
           </div>
 
           <div className="mt-8 flex items-center justify-center gap-2">
-            <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} className="px-3 py-2 rounded-lg border" disabled={currentPage === 1}>Prev</button>
+            <button
+              onClick={() =>
+                setCurrentPage((p) => Math.max(1, p - 1))
+              }
+              className="px-3 py-2 rounded-lg border"
+              disabled={currentPage === 1}
+            >
+              Prev
+            </button>
             <div className="hidden sm:flex gap-1">
               {Array.from({ length: totalPages }).map((_, i) => (
-                <button key={i} onClick={() => setCurrentPage(i + 1)} className={`px-3 py-2 rounded ${currentPage === i + 1 ? "bg-indigo-600 text-white" : "border"}`}>{i + 1}</button>
+                <button
+                  key={i}
+                  onClick={() => setCurrentPage(i + 1)}
+                  className={`px-3 py-2 rounded ${
+                    currentPage === i + 1
+                      ? "bg-indigo-600 text-white"
+                      : "border"
+                  }`}
+                >
+                  {i + 1}
+                </button>
               ))}
             </div>
-            <button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} className="px-3 py-2 rounded-lg border" disabled={currentPage === totalPages}>Next</button>
+            <button
+              onClick={() =>
+                setCurrentPage((p) => Math.min(totalPages, p + 1))
+              }
+              className="px-3 py-2 rounded-lg border"
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </button>
           </div>
         </section>
       </main>
 
       {/* Quick view modal */}
       {selected && selected !== "cart" && (
-        <div className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-auto" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-40 bg-black/40 flex items-center justify-center p-4"
+          onClick={() => setSelected(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-4">
-              <h3 className="text-2xl font-bold">{selected.title}</h3>
-              <p className="text-gray-600 mt-2">{selected.description}</p>
+              <h3 className="text-2xl font-bold">
+                {selected.title}
+              </h3>
+              <p className="text-gray-600 mt-2">
+                {selected.description}
+              </p>
               <div className="mt-4">
-                <img src={selected.img} alt={selected.title} className="w-full h-64 object-cover rounded-lg" />
+                <img
+                  src={selected.img}
+                  alt={selected.title}
+                  className="w-full h-64 object-cover rounded-lg"
+                />
               </div>
               <div className="mt-4 flex items-center justify-between">
-                <div className="text-2xl font-bold">{formatCurrency(selected.price)}</div>
-                <div className="text-sm text-gray-500">⭐ {selected.rating}</div>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(selected.price)}
+                </div>
+                <div className="text-sm text-gray-500">
+                  ⭐ {selected.rating}
+                </div>
               </div>
 
               <div className="mt-6 flex gap-3">
-                <button onClick={() => { addToCart(selected); setSelected(null); }} className="px-4 py-2 rounded-lg bg-indigo-600 text-white">Add to cart</button>
-                <button onClick={() => setSelected(null)} className="px-4 py-2 rounded-lg border">Close</button>
+                <button
+                  onClick={() => {
+                    addToCart(selected);
+                    setSelected(null);
+                  }}
+                  className="px-4 py-2 rounded-lg bg-indigo-600 text-white"
+                >
+                  Add to cart
+                </button>
+                <button
+                  onClick={() => setSelected(null)}
+                  className="px-4 py-2 rounded-lg border"
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>
@@ -373,11 +600,28 @@ export default function App() {
       {selected === "cart" && (
         <>
           <div className="fixed inset-x-0 bottom-0 z-50 sm:hidden">
-            <div className="bg-black/30 fixed inset-0" onClick={() => setSelected(null)} />
-            <div className="relative bg-white rounded-t-2xl shadow-xl max-h-[85vh] overflow-auto p-4" style={{ borderTopLeftRadius: "1rem", borderTopRightRadius: "1rem" }} onClick={(e) => e.stopPropagation()}>
+            <div
+              className="bg-black/30 fixed inset-0"
+              onClick={() => setSelected(null)}
+            />
+            <div
+              className="relative bg-white rounded-t-2xl shadow-xl max'h-[85vh] overflow-auto p-4"
+              style={{
+                borderTopLeftRadius: "1rem",
+                borderTopRightRadius: "1rem",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold">Your cart ({cartCount})</h3>
-                <button onClick={() => setSelected(null)} className="px-3 py-1 rounded border">Close</button>
+                <h3 className="text-lg font-bold">
+                  Your cart ({cartCount})
+                </h3>
+                <button
+                  onClick={() => setSelected(null)}
+                  className="px-3 py-1 rounded border"
+                >
+                  Close
+                </button>
               </div>
 
               {Object.keys(cart).length === 0 ? (
@@ -385,38 +629,127 @@ export default function App() {
               ) : (
                 <div className="space-y-4">
                   {Object.values(cart).map((it) => (
-                    <div key={it.product.id} className="flex items-center justify-between">
+                    <div
+                      key={it.product.id}
+                      className="flex items-center justify-between"
+                    >
                       <div className="flex items-center gap-3">
-                        <img src={it.product.img} alt={it.product.title} className="w-16 h-16 object-cover rounded" />
+                        <img
+                          src={it.product.img}
+                          alt={it.product.title}
+                          className="w-16 h-16 object-cover rounded"
+                        />
                         <div>
-                          <div className="font-medium">{truncate(it.product.title, TITLE_MAX)}</div>
-                          <div className="text-sm text-gray-500">{formatCurrency(it.product.price)}</div>
+                          <div className="font-medium">
+                            {truncate(
+                              it.product.title,
+                              TITLE_MAX
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {formatCurrency(it.product.price)}
+                          </div>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <button onClick={() => decrementQty(it.product.id)} className="px-2 py-1 rounded border">−</button>
+                        <button
+                          onClick={() =>
+                            decrementQty(it.product.id)
+                          }
+                          className="px-2 py-1 rounded border"
+                        >
+                          −
+                        </button>
                         <div className="text-sm">{it.qty}</div>
-                        <button onClick={() => incrementQty(it.product.id)} className="px-2 py-1 rounded border">+</button>
+                        <button
+                          onClick={() =>
+                            incrementQty(it.product.id)
+                          }
+                          className="px-2 py-1 rounded border"
+                        >
+                          +
+                        </button>
                       </div>
                     </div>
                   ))}
 
                   <div className="pt-2 border-t flex items-center justify-between">
                     <div className="font-semibold">Total</div>
-                    <div className="font-bold">{formatCurrency(cartTotal)}</div>
+                    <div className="font-bold">
+                      {formatCurrency(cartTotal)}
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-gray-600 mt-2">
+                    <div>
+                      Watch total (promo):{" "}
+                      <span className="font-semibold">
+                        {formatCurrency(watchTotal)}
+                      </span>
+                    </div>
+                    {bagOffer ? (
+                      <div className="text-green-600 mt-1">
+                        ✅ Promo unlocked: {bagOffer.label}
+                      </div>
+                    ) : (
+                      <div className="mt-1">
+                        No free bag yet. Increase your watch
+                        total to unlock a free bag.
+                      </div>
+                    )}
+                    {nextTierInfo && (
+                      <div className="mt-1">
+                        Add around{" "}
+                        <span className="font-semibold">
+                          {formatCurrency(nextTierInfo.diff)}
+                        </span>{" "}
+                        more in watches. {nextTierInfo.label}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex flex-col gap-2 mt-4">
-                    <a href={buildWhatsAppLink()} target="_blank" rel="noreferrer" className="flex-1 px-4 py-2 rounded-lg bg-green-600 text-white text-center">Finish Up</a>
+                    <a
+                      href={buildWhatsAppLink()}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 px-4 py-2 rounded-lg bg-green-600 text-white text-center"
+                    >
+                      Finish Up
+                    </a>
 
-                    <a href={`mailto:${VENDOR.email}?subject=${encodeURIComponent("Order enquiry")}&body=${encodeURIComponent(`Hello ${VENDOR.name},\n\nI want to order the following items:\n\nTotal: ${formatCurrency(cartTotal)}\n\nPlease get back to me with payment/availability details.\n\nThanks.`)}`} className="px-4 py-2 rounded-lg border text-center">Email Vendor</a>
+                    <a
+                      href={`mailto:${VENDOR.email}?subject=${encodeURIComponent(
+                        "Order enquiry"
+                      )}&body=${encodeURIComponent(
+                        `Hello ${VENDOR.name},\n\nI want to order the following items:\n\nTotal: ${formatCurrency(
+                          cartTotal
+                        )}\nWatch total (for promo): ${formatCurrency(
+                          watchTotal
+                        )}\n\nPlease get back to me with payment/availability details.\n\nThanks.`
+                      )}`}
+                      className="px-4 py-2 rounded-lg border text-center"
+                    >
+                      Email Vendor
+                    </a>
                   </div>
 
                   <div className="text-sm text-gray-600 mt-3">
                     <div>Vendor: {VENDOR.name}</div>
-                    <div>WhatsApp: {VENDOR.phoneLocal} ({VENDOR.phoneIntl})</div>
-                    <div>Email: <a className="text-indigo-600 underline" href={`mailto:${VENDOR.email}`}>{VENDOR.email}</a></div>
+                    <div>
+                      WhatsApp: {VENDOR.phoneLocal} (
+                      {VENDOR.phoneIntl})
+                    </div>
+                    <div>
+                      Email:{" "}
+                      <a
+                        className="text-indigo-600 underline"
+                        href={`mailto:${VENDOR.email}`}
+                      >
+                        {VENDOR.email}
+                      </a>
+                    </div>
                   </div>
                 </div>
               )}
@@ -424,12 +757,25 @@ export default function App() {
           </div>
 
           {/* Desktop / Tablet drawer (visible on sm+) */}
-          <div className="fixed inset-0 hidden sm:flex z-40 items-stretch justify-end" onClick={() => setSelected(null)}>
+          <div
+            className="fixed inset-0 hidden sm:flex z-40 items-stretch justify-end"
+            onClick={() => setSelected(null)}
+          >
             <div className="flex-1 bg-black/40" />
-            <div className="w-full sm:w-96 bg-white shadow-xl overflow-auto" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="w-full sm:w-96 bg-white shadow-xl overflow-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="p-4 flex items-center justify-between">
-                <h3 className="text-lg font-bold">Your cart ({cartCount})</h3>
-                <button onClick={() => setSelected(null)} className="px-3 py-1 rounded border">Close</button>
+                <h3 className="text-lg font-bold">
+                  Your cart ({cartCount})
+                </h3>
+                <button
+                  onClick={() => setSelected(null)}
+                  className="px-3 py-1 rounded border"
+                >
+                  Close
+                </button>
               </div>
 
               <div className="p-4">
@@ -438,38 +784,127 @@ export default function App() {
                 ) : (
                   <div className="space-y-4">
                     {Object.values(cart).map((it) => (
-                      <div key={it.product.id} className="flex items-center justify-between">
+                      <div
+                        key={it.product.id}
+                        className="flex items-center justify-between"
+                      >
                         <div className="flex items-center gap-3">
-                          <img src={it.product.img} alt={it.product.title} className="w-16 h-16 object-cover rounded" />
+                          <img
+                            src={it.product.img}
+                            alt={it.product.title}
+                            className="w-16 h-16 object-cover rounded"
+                          />
                           <div>
-                            <div className="font-medium">{truncate(it.product.title, TITLE_MAX)}</div>
-                            <div className="text-sm text-gray-500">{formatCurrency(it.product.price)}</div>
+                            <div className="font-medium">
+                              {truncate(
+                                it.product.title,
+                                TITLE_MAX
+                              )}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {formatCurrency(it.product.price)}
+                            </div>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <button onClick={() => decrementQty(it.product.id)} className="px-2 py-1 rounded border">−</button>
+                          <button
+                            onClick={() =>
+                              decrementQty(it.product.id)
+                            }
+                            className="px-2 py-1 rounded border"
+                          >
+                            −
+                          </button>
                           <div className="text-sm">{it.qty}</div>
-                          <button onClick={() => incrementQty(it.product.id)} className="px-2 py-1 rounded border">+</button>
+                          <button
+                            onClick={() =>
+                              incrementQty(it.product.id)
+                            }
+                            className="px-2 py-1 rounded border"
+                          >
+                            +
+                          </button>
                         </div>
                       </div>
                     ))}
 
                     <div className="pt-2 border-t flex items-center justify-between">
                       <div className="font-semibold">Total</div>
-                      <div className="font-bold">{formatCurrency(cartTotal)}</div>
+                      <div className="font-bold">
+                        {formatCurrency(cartTotal)}
+                      </div>
+                    </div>
+
+                    <div className="text-xs text-gray-600 mt-2">
+                      <div>
+                        Watch total (promo):{" "}
+                        <span className="font-semibold">
+                          {formatCurrency(watchTotal)}
+                        </span>
+                      </div>
+                      {bagOffer ? (
+                        <div className="text-green-600 mt-1">
+                          ✅ Promo unlocked: {bagOffer.label}
+                        </div>
+                      ) : (
+                        <div className="mt-1">
+                          No free bag yet. Increase your watch
+                          total to unlock a free bag.
+                        </div>
+                      )}
+                      {nextTierInfo && (
+                        <div className="mt-1">
+                          Add around{" "}
+                          <span className="font-semibold">
+                            {formatCurrency(nextTierInfo.diff)}
+                          </span>{" "}
+                          more in watches. {nextTierInfo.label}
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex flex-col gap-2 mt-4">
-                      <a href={buildWhatsAppLink()} target="_blank" rel="noreferrer" className="flex-1 px-4 py-2 rounded-lg bg-green-600 text-white text-center">Finish Up</a>
+                      <a
+                        href={buildWhatsAppLink()}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex-1 px-4 py-2 rounded-lg bg-green-600 text-white text-center"
+                      >
+                        Finish Up
+                      </a>
 
-                      <a href={`mailto:${VENDOR.email}?subject=${encodeURIComponent("Order enquiry")}&body=${encodeURIComponent(`Hello ${VENDOR.name},\n\nI want to order the following items:\n\nTotal: ${formatCurrency(cartTotal)}\n\nPlease get back to me with payment/availability details.\n\nThanks.`)}`} className="px-4 py-2 rounded-lg border text-center">Email Vendor</a>
+                      <a
+                        href={`mailto:${VENDOR.email}?subject=${encodeURIComponent(
+                          "Order enquiry"
+                        )}&body=${encodeURIComponent(
+                          `Hello ${VENDOR.name},\n\nI want to order the following items:\n\nTotal: ${formatCurrency(
+                            cartTotal
+                          )}\nWatch total (for promo): ${formatCurrency(
+                            watchTotal
+                          )}\n\nPlease get back to me with payment/availability details.\n\nThanks.`
+                        )}`}
+                        className="px-4 py-2 rounded-lg border text-center"
+                      >
+                        Email Vendor
+                      </a>
                     </div>
 
                     <div className="text-sm text-gray-600 mt-3">
                       <div>Vendor: {VENDOR.name}</div>
-                      <div>WhatsApp: {VENDOR.phoneLocal} ({VENDOR.phoneIntl})</div>
-                      <div>Email: <a className="text-indigo-600 underline" href={`mailto:${VENDOR.email}`}>{VENDOR.email}</a></div>
+                      <div>
+                        WhatsApp: {VENDOR.phoneLocal} (
+                        {VENDOR.phoneIntl})
+                      </div>
+                      <div>
+                        Email:{" "}
+                        <a
+                          className="text-indigo-600 underline"
+                          href={`mailto:${VENDOR.email}`}
+                        >
+                          {VENDOR.email}
+                        </a>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -481,7 +916,15 @@ export default function App() {
 
       <footer className="border-t mt-12 bg-white">
         <div className="max-w-7xl mx-auto px-4 py-6 text-sm text-gray-600 flex items-center justify-between">
-          <div>done by <a className="font-bold text-blue-500" href="https://www.josephbawo.tech/">josephbawo</a></div>
+          <div>
+            done by{" "}
+            <a
+              className="font-bold text-blue-500"
+              href="https://www.josephbawo.tech/"
+            >
+              josephbawo
+            </a>
+          </div>
         </div>
       </footer>
 
